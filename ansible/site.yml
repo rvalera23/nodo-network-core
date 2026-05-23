@@ -1,36 +1,49 @@
 ---
-- name: Automatización Nodo Network Core (Estructura Uniforme)
-  hosts: all
+- name: Automatización Nodo Network Core (Nativo)
+  hosts: localhost
   become: yes
   tasks:
     - name: FASE 1 - Instalar dependencias
       apt:
-        name: [docker.io, docker-compose, python3-pip, git]
+        name: [kea-dhcp4-server, unbound]
         state: present
         update_cache: yes
 
-    - name: FASE 3 - Crear estructura de persistencia y backups
-      file:
-        path: "/opt/servicios/nodo-network-core/{{ item }}"
-        state: directory
-        mode: '0755'
+    - name: FASE 2 - Crear directorios y escribir configuraciones automáticamente
+      copy:
+        dest: "{{ item.path }}"
+        content: "{{ item.content }}"
+        mode: '0644'
       with_items:
-        - 'kea/config'
-        - 'kea/data'
-        - 'coredns/config'
-        - 'backups'
-        - 'backups/network_config'
+        - path: /etc/kea/kea-dhcp4.conf
+          content: |
+            {
+              "Dhcp4": {
+                "interfaces-config": { "interfaces": [ "eth0" ] },
+                "subnet4": [
+                  {
+                    "subnet": "192.168.1.0/24",
+                    "pools": [ { "pool": "192.168.1.50-192.168.1.150" } ]
+                  }
+                ],
+                "valid-lifetime": 4000
+              }
+            }
+        - path: /etc/unbound/unbound.conf
+          content: |
+            server:
+                interface: 0.0.0.0
+                access-control: 192.168.1.0/24 allow
+                do-ip4: yes
+                do-udp: yes
+                do-tcp: yes
+                verbosity: 1
 
-    - name: FASE 4 - Pull de imágenes
-      shell: "docker pull iscprojects/kea:latest && docker pull coredns/coredns:latest"
-
-    - name: FASE 5 - Lanzamiento del servicio
-      shell: "cd /opt/servicios/nodo-network-core && docker compose up -d"
-
-    - name: FASE 6 - Asegurar permisos unificados
-      file:
-        path: "/opt/servicios/nodo-network-core"
-        state: directory
-        owner: "root"
-        group: "root"
-        recurse: yes
+    - name: FASE 3 - Reiniciar y habilitar servicios
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        enabled: yes
+      with_items:
+        - kea-dhcp4-server
+        - unbound
