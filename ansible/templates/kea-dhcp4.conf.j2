@@ -1,0 +1,27 @@
+{
+  "Dhcp4": {
+    "interfaces-config": { "interfaces": ["{{ red_principal.interfaz }}"] },
+    "subnet4": [
+      {% for nombre, red in redes.items() %}
+      {
+        "id": {{ loop.index }},
+        "subnet": "{{ red.subnet }}",
+        "pools": [ { "pool": "{{ red.rango_inicio }}-{{ red.rango_fin }}" } ],
+        "option-data": [
+            { "name": "routers", "data": "{{ red.gateway }}" },
+            { "name": "domain-name-servers", "data": "{{ red.dns }}" }
+        ],
+        "reservations": [
+            {% for item in reservas %}
+            {
+                "hostname": "{{ item.hostname }}",
+                "hw-address": "{{ item.hw }}",
+                "ip-address": "{{ item.ip }}"
+            }{{ "," if not loop.last else "" }}
+            {% endfor %}
+        ]
+      }{{ "," if not loop.last else "" }}
+      {% endfor %}
+    ]
+  }
+}

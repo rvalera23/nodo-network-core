@@ -1,0 +1,20 @@
+# --- Archivos de respaldo (Backups que genera tu Playbook) ---
+backups/
+
+# --- Carpetas temporales de Ansible ---
+.ansible/
+*.retry
+
+# --- Archivos de sistema y logs ---
+*.log
+*.tmp
+/tmp/*
+
+# --- Archivos sensibles (Si en el futuro usas Ansible Vault o passwords) ---
+*.vault
+*.key
+
+# --- Entorno local (Si usas IDEs como VS Code) ---
+.vscode/
+.idea/
+.DS_Store

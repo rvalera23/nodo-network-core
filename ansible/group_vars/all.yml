@@ -1,0 +1,32 @@
+# --- CONFIGURACIÓN DE RED ---
+# Cambia 'eth0' por la interfaz de tu servidor (ej. ens33, enp0s3)
+red_principal:
+  interfaz: "ens33"
+
+# Aquí puedes añadir todas las redes que quieras. 
+# El playbook creará automáticamente una subnet para cada una.
+redes:
+  LAN_CASA:
+    subnet: "192.168.1.0/24"
+    rango_inicio: "192.168.1.50"
+    rango_fin: "192.168.1.150"
+    gateway: "192.168.1.1"
+    # DNS: Puedes cambiar estos valores cuando lo necesites
+    dns: "192.168.1.11, 8.8.8.8"
+
+# --- CONFIGURACIÓN DE IP FIJA (RESERVACIONES) ---
+# Para añadir un equipo, simplemente añade un bloque aquí:
+# - hostname: "nombre"
+#   hw: "AA:BB:CC:DD:EE:FF"
+#   ip: "192.168.1.XX"
+reservas:
+  - { hostname: "impresora", hw: "AA:BB:CC:DD:EE:FF", ip: "192.168.1.55" }
+
+# --- RUTAS PARA AUTOMATIZACIÓN ---
+paths:
+  backups_kea: "/opt/servicios/nodo-network-core/backups/kea-dhcp4"
+  backups_unbound: "/opt/servicios/nodo-network-core/backups/unbound"
+  zones_dns: "/etc/unbound/zones.d"
+
+# --- VARIABLE FALTANTE PARA UNBOUND ---
+dns_bind: "0.0.0.0"

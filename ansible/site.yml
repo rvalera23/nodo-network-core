@@ -1,45 +1,76 @@
 ---
-- name: Automatización Nodo Network Core (Nativo)
+- name: Automatización Nodo Network Core DHCP Kea + DNS Unbound
   hosts: localhost
   become: yes
+  vars_files:
+    - group_vars/all.yml
   tasks:
+    - name: FASE 0 - Preparar estructura de directorios
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ paths.backups_kea }}"
+        - "{{ paths.backups_unbound }}"
+        - "{{ paths.zones_dns }}"
+
     - name: FASE 1 - Instalar dependencias
       apt:
         name: [kea-dhcp4-server, unbound]
         state: present
         update_cache: yes
 
-    - name: FASE 2 - Crear directorios y escribir configuraciones automáticamente
-      copy:
-        dest: "{{ item.path }}"
-        content: "{{ item.content }}"
+    - name: FASE 2 - Asegurar estructura jerárquica de backups
+      file:
+        path: "/opt/servicios/nodo-network-core/backups/{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "root"
+        group: "root"
+      with_items:
+        - kea-dhcp4
+        - unbound
+
+    - name: FASE 2.1 - Realizar respaldo de configuraciones actuales
+      archive:
+        path:
+          - /etc/kea/kea-dhcp4.conf
+        dest: "/opt/servicios/nodo-network-core/backups/kea-dhcp4/backup_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ignore_errors: yes
+
+    - name: FASE 2.2 - Realizar respaldo de configuraciones unbound
+      archive:
+        path:
+          - /etc/unbound/unbound.conf
+        dest: "/opt/servicios/nodo-network-core/backups/unbound/backup_{{ ansible_date_time.iso8601_basic_short }}.tar.gz"
+      ignore_errors: yes
+    
+    - name: FASE 3 - Preparar directorios de zonas DNS
+      file:
+        path: /etc/unbound/zones.d
+        state: directory
+        mode: '0755'
+
+    - name: FASE 4 - Desplegar configuraciones (Templates)
+      template:
+        src: "templates/{{ item.src }}"
+        dest: "{{ item.dest }}"
         mode: '0644'
       with_items:
-        - path: /etc/kea/kea-dhcp4.conf
-          content: |
-            {
-              "Dhcp4": {
-                "interfaces-config": { "interfaces": [ "eth0" ] },
-                "subnet4": [
-                  {
-                    "subnet": "192.168.1.0/24",
-                    "pools": [ { "pool": "192.168.1.50-192.168.1.150" } ]
-                  }
-                ],
-                "valid-lifetime": 4000
-              }
-            }
-        - path: /etc/unbound/unbound.conf
-          content: |
-            server:
-                interface: 0.0.0.0
-                access-control: 192.168.1.0/24 allow
-                do-ip4: yes
-                do-udp: yes
-                do-tcp: yes
-                verbosity: 1
+        - { src: 'kea-dhcp4.conf.j2', dest: '/etc/kea/kea-dhcp4.conf' }
+        - { src: 'unbound.conf.j2', dest: '/etc/unbound/unbound.conf' }
+      notify: Reiniciar servicios
 
-    - name: FASE 3 - Reiniciar y habilitar servicios
+    - name: FASE 5 - Sincronizar archivos de zonas DNS
+      copy:
+        src: zones.d/
+        dest: /etc/unbound/zones.d/
+        mode: '0644'
+      notify: Reiniciar servicios
+
+  handlers:
+    - name: Reiniciar servicios
       systemd:
         name: "{{ item }}"
         state: restarted

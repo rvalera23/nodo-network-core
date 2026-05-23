@@ -1,0 +1,39 @@
+server:
+    # 1. INTERFAZ: IP en la que Unbound escucha. 0.0.0.0 acepta peticiones de cualquier interfaz.
+    interface: {{ dns_bind }}
+    
+    # 2. ACCESO: Define qué redes tienen permiso para consultar a este servidor DNS.
+    access-control: 192.168.0.0/16 allow
+    access-control: 127.0.0.0/8 allow
+    
+    # 3. PROTOCOLOS: Activamos IPv4, UDP y TCP.
+    do-ip4: yes
+    do-udp: yes
+    do-tcp: yes
+    
+    # 4. RENDIMIENTO Y SEGURIDAD:
+    verbosity: 1
+    hide-version: yes
+    harden-glue: yes
+    
+    # 5. REGISTROS DNS ESTÁTICOS (IPs FIJAS):
+    # Aquí puedes definir nombres para tus equipos.
+    # Sintaxis: local-data: "nombre.dominio. IN A IP"
+    local-data: "nodo.core.local. IN A 192.168.1.11"
+    local-data: "impresora.local. IN A 192.168.1.55"
+    
+    # 6. ALIAS (CNAME): 
+    # Apodos para servicios (ej. 'nas' apunta a 'servidor-nas')
+    local-data: "nas.local. IN CNAME nodo.core.local."
+
+    # 7. INCLUSIÓN DINÁMICA:
+    # Esto es vital: todo lo que pongas en /etc/unbound/zones.d/ con extensión .conf
+    # será leído automáticamente. Así mantienes tu configuración limpia.
+    include: "/etc/unbound/zones.d/*.conf"
+
+# --- EJEMPLO DE ARCHIVO PARA ZONES.D ---
+# Si quieres separar configuraciones por cliente o VLAN:
+# Crea /etc/unbound/zones.d/camaras.conf
+# Contenido:
+# local-data: "camara1.local. IN A 192.168.20.10"
+# local-data: "camara2.local. IN A 192.168.20.11"
