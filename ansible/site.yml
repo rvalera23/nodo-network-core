@@ -1,0 +1,31 @@
+---
+- name: Automatización Nodo Network Core
+  hosts: all
+  become: yes
+  tasks:
+    - name: FASE 1 - Instalar dependencias
+      apt:
+        name: [docker.io, docker-compose, python3-pip, git]
+        state: present
+        update_cache: yes
+
+    - name: FASE 2 - Crear estructura de directorios Nodo
+      file:
+        path: "/opt/servicios/nodo-network-core/{{ item }}"
+        state: directory
+        mode: '0755'
+      with_items:
+        - 'kea/config'
+        - 'kea/data'
+        - 'coredns/config'
+
+    - name: FASE 3 - Desplegar servicios
+      shell: "cd /opt/servicios/nodo-network-core && docker compose up -d"
+
+    - name: FASE 4 - Asegurar permisos persistencia
+      file:
+        path: "/opt/servicios/nodo-network-core/kea/data"
+        state: directory
+        owner: "100" # Usuario interno de Kea
+        group: "101"
+        recurse: yes
