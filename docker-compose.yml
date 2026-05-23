@@ -1,0 +1,24 @@
+services:
+  kea-dhcp:
+    image: iscprojects/kea:latest
+    container_name: dhcp_kea_server
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./kea/config:/etc/kea
+      - ./kea/data:/var/lib/kea
+
+  coredns:
+    image: coredns/coredns:latest
+    container_name: coredns_server
+    restart: unless-stopped
+    command: -conf /etc/coredns/Corefile
+    volumes:
+      - ./coredns/config:/etc/coredns
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+
+networks:
+  default:
+    name: nodo_network_core
