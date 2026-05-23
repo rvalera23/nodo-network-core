@@ -1,5 +1,5 @@
 ---
-- name: Automatización Nodo Network Core
+- name: Automatización Nodo Network Core (Estructura Uniforme)
   hosts: all
   become: yes
   tasks:
@@ -9,7 +9,7 @@
         state: present
         update_cache: yes
 
-    - name: FASE 2 - Crear estructura de directorios Nodo
+    - name: FASE 3 - Crear estructura de persistencia y backups
       file:
         path: "/opt/servicios/nodo-network-core/{{ item }}"
         state: directory
@@ -18,14 +18,19 @@
         - 'kea/config'
         - 'kea/data'
         - 'coredns/config'
+        - 'backups'
+        - 'backups/network_config'
 
-    - name: FASE 3 - Desplegar servicios
+    - name: FASE 4 - Pull de imágenes
+      shell: "docker pull iscprojects/kea:latest && docker pull coredns/coredns:latest"
+
+    - name: FASE 5 - Lanzamiento del servicio
       shell: "cd /opt/servicios/nodo-network-core && docker compose up -d"
 
-    - name: FASE 4 - Asegurar permisos persistencia
+    - name: FASE 6 - Asegurar permisos unificados
       file:
-        path: "/opt/servicios/nodo-network-core/kea/data"
+        path: "/opt/servicios/nodo-network-core"
         state: directory
-        owner: "100" # Usuario interno de Kea
-        group: "101"
+        owner: "root"
+        group: "root"
         recurse: yes
